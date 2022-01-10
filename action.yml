@@ -1,0 +1,19 @@
+name: 'Semantic Version Bumper'
+description: 'Bump version with semantic version and generate changelog'
+author: 'CI010'
+inputs:
+  packages:
+    description: 'The paths of the packages need to be bumped'
+    required: false
+  changelog-start-at:
+    description: 'The start line of the changelog'
+    required: false
+outputs:
+  release:
+    description: A boolean value that should any new packages release
+  version:
+    description: The new version of the root package
+
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
