@@ -240,7 +240,7 @@ async function main() {
     const packagesNames = getMultilineInput('packages', { required: false })
     const changelogStartIndex = Number.parseInt(getInput('changelog-start-at', { required: false }) || '0')
     const root = getInput('root', { required: false }) || '.'
-    const changelogTarget = getBooleanInput('changelog-target', { required: false }) || 'all'
+    // const changelogTarget = getBooleanInput('changelog-target', { required: false }) || 'all'
 
     const data =
         packagesNames.length > 0
