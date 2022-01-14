@@ -239,7 +239,7 @@ async function updatePackageContent(update: PackageUpdate, changelogStartIndex: 
 async function main() {
     const packagesNames = getMultilineInput('packages', { required: false })
     const changelogStartIndex = Number.parseInt(getInput('changelog-start-at', { required: false }) || '0')
-    const root = getInput('root', { required: false }) || '.'
+    const root = getInput('root', { required: false }) || process.cwd()
     // const changelogTarget = getBooleanInput('changelog-target', { required: false }) || 'all'
 
     const data =
@@ -267,10 +267,11 @@ async function main() {
         body += renderChangelog(update, false)
     }
 
-    if (execSync('CHANGELOG.md')) {
-        const changelog = await fs.promises.readFile('CHANGELOG.md', 'utf-8')
+    const changelogPath = join(root, 'CHANGELOG.md')
+    if (fs.existsSync(changelogPath)) {
+        const changelog = await fs.promises.readFile(changelogPath, 'utf-8')
         const changelogLines = changelog.split('\n')
-        await fs.promises.writeFile('CHANGELOG.md', [...changelogLines.slice(0, changelogStartIndex), body, ...changelogLines.slice(changelogStartIndex)].join('\n'))
+        await fs.promises.writeFile(changelogPath, [...changelogLines.slice(0, changelogStartIndex), body, ...changelogLines.slice(changelogStartIndex)].join('\n'))
     }
 
     if (releaseType) {
