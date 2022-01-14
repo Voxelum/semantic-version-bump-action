@@ -71,7 +71,7 @@ interface PackageData {
 }
 
 interface Reasons {
-    breaks: CommitBase[]
+    breakings: CommitBase[]
     feats: CommitBase[]
     fixes: CommitBase[]
     deps: { name: string; releaseType: string }[]
@@ -119,9 +119,9 @@ function renderChangelog(update: PackageUpdate, dedicated: boolean): string {
     const padding = dedicated ? '###' : '####'
 
     let body = dedicated ? `## ${update.newVersion}\n` : `### ${update.packageJson.name}@${update.newVersion}\n`;
-    if (reasons.breaks.length !== 0) {
+    if (reasons.breakings.length !== 0) {
         body += `${padding} BREAKING CHANGES\n\n`
-        reasons.breaks.map(log).forEach(l => body += l);
+        reasons.breakings.map(log).forEach(l => body += l);
     }
     if (reasons.feats.length !== 0) {
         body += `${padding} Features\n\n`
@@ -183,7 +183,7 @@ async function calculatePackagesUpdate(packages: PackageData[]) {
         const bumpLevel = Math.min(suggestion.level ?? 3, depsUpdates.length > 0 ? 2 : 3)
         const releaseType = getReleaseType(bumpLevel)
         const newVersion = releaseType ? inc(pkg.packageJson.version, releaseType) : pkg.packageJson.version
-        const reasons = suggestion.reasons ?? { deps: [], breaks: [], feats: [], fixes: [] }
+        const reasons = suggestion.reasons ?? { deps: [], breakings: [], feats: [], fixes: [] }
 
         if (depsUpdates.length > 0) {
             for (const dep of depsUpdates) {
