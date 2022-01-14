@@ -83,7 +83,7 @@ interface PackageUpdate extends PackageData {
     reasons: Reasons
 }
 
-const remote = execSync('git config --get remote.origin.url').toString()
+const remote = execSync('git config --get remote.origin.url').toString().trim()
 
 async function getBumpSuggestion(path: string) {
     const result = await new Promise<convBump.Callback.Recommendation & { reasons: Reasons }>((resolve, reject) => {
@@ -111,7 +111,8 @@ async function getBumpSuggestion(path: string) {
 }
 
 function log(reason: CommitBase) {
-    return `- **${reason.scope}**: ${reason.subject} ([${reason.hash!}](${remote}/commit/${reason.hash!}))\n`
+    const head = reason.scope ? `**${reason.scope}**: ` : ''
+    return `- ${head}${reason.subject} ([${reason.hash!}](${remote}/commit/${reason.hash!}))\n`
 }
 
 function renderChangelog(update: PackageUpdate, dedicated: boolean): string {
@@ -242,8 +243,10 @@ async function main() {
     const root = getInput('root', { required: false }) || process.cwd()
     // const changelogTarget = getBooleanInput('changelog-target', { required: false }) || 'all'
 
+    const isMonorepo = packagesNames.length > 0
+
     const data =
-        packagesNames.length > 0
+        isMonorepo
             ? await Promise.all(packagesNames.map(pack => readPackage(pack)))
             : [await readPackage(root)]
 
@@ -253,36 +256,45 @@ async function main() {
         await updatePackageContent(update, changelogStartIndex)
     }
 
-    const rootJsonPath = join(root, 'package.json')
-    const rootPackageJson = JSON.parse(await fs.promises.readFile(rootJsonPath, 'utf-8'))
-    const totalBumpLevel = Math.min(...updates.map(u => u.bumpLevel))
-    const releaseType = getReleaseType(totalBumpLevel)
-    const totalVersion = releaseType ? inc(rootPackageJson.version, releaseType) : rootPackageJson.version
+    if (isMonorepo) {
+        const rootJsonPath = join(root, 'package.json')
+        const rootPackageJson = JSON.parse(await fs.promises.readFile(rootJsonPath, 'utf-8'))
+        const totalBumpLevel = Math.min(...updates.map(u => u.bumpLevel))
+        const releaseType = getReleaseType(totalBumpLevel)
+        const totalVersion = releaseType ? inc(rootPackageJson.version, releaseType) : rootPackageJson.version
 
-    rootPackageJson.version = totalVersion
-    await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
-    
-    let body = `\n## ${totalVersion}\n`;
-    for (const update of updates) {
-        body += renderChangelog(update, false)
-    }
+        rootPackageJson.version = totalVersion
+        await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
 
-    const changelogPath = join(root, 'CHANGELOG.md')
-    if (fs.existsSync(changelogPath)) {
-        const changelog = await fs.promises.readFile(changelogPath, 'utf-8')
-        const changelogLines = changelog.split('\n')
-        await fs.promises.writeFile(changelogPath, [...changelogLines.slice(0, changelogStartIndex), body, ...changelogLines.slice(changelogStartIndex)].join('\n'))
-    }
+        let body = `\n## ${totalVersion}\n`;
+        for (const update of updates) {
+            body += renderChangelog(update, false)
+        }
 
-    if (releaseType) {
-        setOutput('release', true)
-        setOutput('version', totalVersion)
-        setOutput('changelog', body)
+        const changelogPath = join(root, 'CHANGELOG.md')
+        if (fs.existsSync(changelogPath)) {
+            const changelog = await fs.promises.readFile(changelogPath, 'utf-8')
+            const changelogLines = changelog.split('\n')
+            await fs.promises.writeFile(changelogPath, [...changelogLines.slice(0, changelogStartIndex), body, ...changelogLines.slice(changelogStartIndex)].join('\n'))
+        }
+
+        if (releaseType) {
+            setOutput('release', true)
+            setOutput('version', totalVersion)
+            setOutput('changelog', body)
+            return
+        }
     } else {
-        setOutput('release', false)
-        setOutput('version', totalVersion)
-        setOutput('changelog', '')
+        if (updates.length === 1) {
+            setOutput('release', true)
+            setOutput('version', updates[0].newVersion)
+            setOutput('changelog', renderChangelog(updates[0], true))
+            return
+        }
     }
+    setOutput('release', false)
+    setOutput('version', '')
+    setOutput('changelog', '')
 }
 
 main();
