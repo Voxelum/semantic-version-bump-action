@@ -239,12 +239,13 @@ async function updatePackageContent(update: PackageUpdate, changelogStartIndex: 
 async function main() {
     const packagesNames = getMultilineInput('packages', { required: false })
     const changelogStartIndex = Number.parseInt(getInput('changelog-start-at', { required: false }) || '0')
+    const root = getInput('root', { required: false }) || '.'
     const changelogTarget = getBooleanInput('changelog-target', { required: false }) || 'all'
 
     const data =
         packagesNames.length > 0
             ? await Promise.all(packagesNames.map(pack => readPackage(pack)))
-            : [await readPackage('.')]
+            : [await readPackage(root)]
 
     const updates = await calculatePackagesUpdate(data)
 
@@ -252,20 +253,21 @@ async function main() {
         await updatePackageContent(update, changelogStartIndex)
     }
 
-    const rootPackageJson = JSON.parse(await fs.promises.readFile('package.json', 'utf-8'))
+    const rootJsonPath = join(root, 'package.json')
+    const rootPackageJson = JSON.parse(await fs.promises.readFile(rootJsonPath, 'utf-8'))
     const totalBumpLevel = Math.min(...updates.map(u => u.bumpLevel))
     const releaseType = getReleaseType(totalBumpLevel)
     const totalVersion = releaseType ? inc(rootPackageJson.version, releaseType) : rootPackageJson.version
 
     rootPackageJson.version = totalVersion
-    await fs.promises.writeFile('package.json', JSON.stringify(rootPackageJson, null, 4))
+    await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
     
-    if (execSync('CHANGELOG.md')) {
-        let body = `\n## ${totalVersion}\n`;
-        for (const update of updates) {
-            body += renderChangelog(update, false)
-        }
+    let body = `\n## ${totalVersion}\n`;
+    for (const update of updates) {
+        body += renderChangelog(update, false)
+    }
 
+    if (execSync('CHANGELOG.md')) {
         const changelog = await fs.promises.readFile('CHANGELOG.md', 'utf-8')
         const changelogLines = changelog.split('\n')
         await fs.promises.writeFile('CHANGELOG.md', [...changelogLines.slice(0, changelogStartIndex), body, ...changelogLines.slice(changelogStartIndex)].join('\n'))
@@ -274,8 +276,11 @@ async function main() {
     if (releaseType) {
         setOutput('release', true)
         setOutput('version', totalVersion)
+        setOutput('changelog', body)
     } else {
         setOutput('release', false)
+        setOutput('version', totalVersion)
+        setOutput('changelog', '')
     }
 }
 

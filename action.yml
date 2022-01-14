@@ -8,11 +8,16 @@ inputs:
   changelog-start-at:
     description: 'The start line of the changelog'
     required: false
+  root:
+    description: 'The root directory of the repo/monorepo package.json'
+    required: false
 outputs:
   release:
     description: A boolean value that should any new packages release
   version:
     description: The new version of the root package
+  changelog:
+    description: The root changelog text
 
 runs:
   using: 'node16'

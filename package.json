@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "esbuild --bundle --outdir=dist --format=cjs --platform=node src/index.ts"
+    "build": "esbuild --bundle --outdir=dist --format=cjs --minify --platform=node src/index.ts"
   },
   "repository": {
     "type": "git",
