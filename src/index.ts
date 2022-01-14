@@ -227,13 +227,14 @@ async function calculatePackagesUpdate(packages: PackageData[]) {
 async function updatePackageContent(update: PackageUpdate, changelogStartIndex: number) {
     await fs.promises.writeFile(update.packageJsonPath, JSON.stringify({ ...update.packageJson, version: update.newVersion }, null, 4));
 
-    if (fs.existsSync(join(update.packageDir, 'CHANGELOG.md'))) {
-        const changelog = await fs.promises.readFile(join(update.packageDir, 'CHANGELOG.md'), 'utf-8').catch(() => '')
+    const changelogPath = join(update.packageDir, 'CHANGELOG.md')
+    if (fs.existsSync(changelogPath)) {
+        const changelog = await fs.promises.readFile(changelogPath, 'utf-8').catch(() => '')
         const changelogLines = changelog.split('\n')
         const newChangelog = renderChangelog(update, true)
         const start = changelogStartIndex;
         const result = [...changelogLines.slice(0, start), ...newChangelog.split('\n'), ...changelogLines.slice(start)].join('\n');
-        await fs.promises.writeFile('CHANGELOG.md', result);
+        await fs.promises.writeFile(changelogPath, result);
     }
 }
 
