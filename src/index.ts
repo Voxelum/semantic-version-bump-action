@@ -117,6 +117,12 @@ function log(reason: CommitBase) {
 
 function renderChangelog(update: PackageUpdate, dedicated: boolean): string {
     const reasons = update.reasons
+    if (reasons.breakings.length === 0
+        && reasons.deps.length === 0
+        && reasons.feats.length === 0
+        && reasons.fixes.length === 0) {
+        return ''
+    }
     const padding = dedicated ? '###' : '####'
 
     let body = dedicated ? `## ${update.newVersion}\n` : `### ${update.packageJson.name}@${update.newVersion}\n`;
@@ -134,7 +140,7 @@ function renderChangelog(update: PackageUpdate, dedicated: boolean): string {
     }
     if (reasons.deps.length !== 0) {
         body += `${padding} Dependencies Updates\n\n`
-        reasons.deps.map(d => `Dependency ${d.name} bump **${d.releaseType}**`).forEach(l => body += l);
+        reasons.deps.map(d => `Dependency ${d.name} bump **${d.releaseType}**\n`).forEach(l => body += l);
     }
 
     return body
@@ -232,9 +238,11 @@ async function updatePackageContent(update: PackageUpdate, changelogStartIndex: 
         const changelog = await fs.promises.readFile(changelogPath, 'utf-8').catch(() => '')
         const changelogLines = changelog.split('\n')
         const newChangelog = renderChangelog(update, true)
-        const start = changelogStartIndex;
-        const result = [...changelogLines.slice(0, start), ...newChangelog.split('\n'), ...changelogLines.slice(start)].join('\n');
-        await fs.promises.writeFile(changelogPath, result);
+        if (newChangelog) {
+            const start = changelogStartIndex;
+            const result = [...changelogLines.slice(0, start), ...newChangelog.split('\n'), ...changelogLines.slice(start)].join('\n');
+            await fs.promises.writeFile(changelogPath, result);
+        }
     }
 }
 
