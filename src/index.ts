@@ -182,7 +182,10 @@ async function calculatePackagesUpdate(packages: PackageData[]) {
             for (const dep of Object.keys(deps)) {
                 const localPackage = dict[dep]
                 if (localPackage) {
-                    depsUpdates.push(await getPackageBump(localPackage));
+                    const update = await getPackageBump(localPackage);
+                    if (update.bumpLevel < 2) {
+                        depsUpdates.push(update);
+                    }
                 }
             }
         }
