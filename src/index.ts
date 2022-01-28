@@ -259,9 +259,7 @@ async function main() {
 
     const data =
         isMonorepo
-            ? readRootCommits
-                ? await Promise.all(packagesNames.map(pack => readPackage(pack)))
-                : await Promise.all(packagesNames.map(pack => readPackage(pack)))
+            ? await Promise.all(packagesNames.map(pack => readPackage(pack)))
             : [await readPackage(root)]
 
     const updates = await calculatePackagesUpdate(data)
