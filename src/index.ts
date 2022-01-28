@@ -253,13 +253,15 @@ async function main() {
     const packagesNames = getMultilineInput('packages', { required: false })
     const changelogStartIndex = Number.parseInt(getInput('changelog-start-at', { required: false }) || '0')
     const root = getInput('root', { required: false }) || process.cwd()
-    // const changelogTarget = getBooleanInput('changelog-target', { required: false }) || 'all'
+    const readRootCommits = getInput('read-root-commits', { required: false }) || false
 
     const isMonorepo = packagesNames.length > 0
 
     const data =
         isMonorepo
-            ? await Promise.all(packagesNames.map(pack => readPackage(pack)))
+            ? readRootCommits
+                ? await Promise.all(packagesNames.map(pack => readPackage(pack)))
+                : await Promise.all(packagesNames.map(pack => readPackage(pack)))
             : [await readPackage(root)]
 
     const updates = await calculatePackagesUpdate(data)
@@ -269,6 +271,11 @@ async function main() {
     }
 
     if (isMonorepo) {
+        if (readRootCommits) {
+            const rootPkg = await readPackage(root)
+            const [rootUpdate] = await calculatePackagesUpdate([rootPkg])
+            updates.push(rootUpdate)
+        }
         const rootJsonPath = join(root, 'package.json')
         const rootPackageJson = JSON.parse(await fs.promises.readFile(rootJsonPath, 'utf-8'))
         const totalBumpLevel = Math.min(...updates.map(u => u.bumpLevel))

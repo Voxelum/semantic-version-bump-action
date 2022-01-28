@@ -11,6 +11,9 @@ inputs:
   root:
     description: 'The root directory of the repo/monorepo package.json'
     required: false
+  read-root-commits:
+    description: 'Should read root commits history in monorepo. USE THIS CAREFULLY!'
+    required: false
 outputs:
   release:
     description: A boolean value that should any new packages release
