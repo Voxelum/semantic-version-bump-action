@@ -140,7 +140,7 @@ function renderChangelog(update: PackageUpdate, dedicated: boolean): string {
     }
     if (reasons.deps.length !== 0) {
         body += `${padding} Dependencies Updates\n\n`
-        reasons.deps.map(d => `Dependency ${d.name} bump **${d.releaseType}**\n`).forEach(l => body += l);
+        reasons.deps.map(d => `- Dependency ${d.name} bump **${d.releaseType}**\n`).forEach(l => body += l);
     }
 
     return body
