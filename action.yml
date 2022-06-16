@@ -14,6 +14,9 @@ inputs:
   read-root-commits:
     description: 'Should read root commits history in monorepo. USE THIS CAREFULLY!'
     required: false
+  write-root-commits-only:
+    description: 'Only write the commits history read from root directory, exclude the separated commits from listed packages'
+    required: false
 outputs:
   release:
     description: A boolean value that should any new packages release

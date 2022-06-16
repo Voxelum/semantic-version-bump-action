@@ -254,6 +254,7 @@ async function main() {
     const changelogStartIndex = Number.parseInt(getInput('changelog-start-at', { required: false }) || '0')
     const root = getInput('root', { required: false }) || process.cwd()
     const readRootCommits = getInput('read-root-commits', { required: false }) || false
+    const writeRootCommitsOnly = getInput('write-root-commits-only', { required: false }) || false
 
     const isMonorepo = packagesNames.length > 0
 
@@ -269,10 +270,11 @@ async function main() {
     }
 
     if (isMonorepo) {
+        let rootUpdate: PackageUpdate | undefined
         if (readRootCommits) {
             const rootPkg = await readPackage(root)
-            const [rootUpdate] = await calculatePackagesUpdate([rootPkg])
-            updates.push(rootUpdate)
+            const updates = await calculatePackagesUpdate([rootPkg])
+            rootUpdate = updates[0]
         }
         const rootJsonPath = join(root, 'package.json')
         const rootPackageJson = JSON.parse(await fs.promises.readFile(rootJsonPath, 'utf-8'))
@@ -284,8 +286,15 @@ async function main() {
         await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
 
         let body = `\n## ${totalVersion}\n`;
-        for (const update of updates) {
-            body += renderChangelog(update, false)
+        if (writeRootCommitsOnly && rootUpdate) {
+            body += renderChangelog(rootUpdate, false)
+        } else {
+            for (const update of updates) {
+                body += renderChangelog(update, false)
+            }
+            if (rootUpdate) {
+                body += renderChangelog(rootUpdate, false)
+            }
         }
 
         const changelogPath = join(root, 'CHANGELOG.md')
