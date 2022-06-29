@@ -97,7 +97,7 @@ async function getBumpSuggestion(path: string) {
                     return { level: 0, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings } // major
                 } else if (comments.some(c => c.type === 'feat')) {
                     return { level: 1, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings } // minor
-                } else if (comments.some(c => c.type === 'fix' || c.type === 'refactor')) {
+                } else if (comments.some(c => c.type === 'fix' || c.type === 'refactor' || c.type === 'patch')) {
                     return { level: 2, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings } // patch
                 }
                 return {}
@@ -127,19 +127,19 @@ function renderChangelog(update: PackageUpdate, dedicated: boolean): string {
 
     let body = dedicated ? `## ${update.newVersion}\n` : `### ${update.packageJson.name}@${update.newVersion}\n`;
     if (reasons.breakings.length !== 0) {
-        body += `${padding} BREAKING CHANGES\n\n`
+        body += `${padding} BREAKING CHANGES 🛰️\n\n`
         reasons.breakings.map(log).forEach(l => body += l);
     }
     if (reasons.feats.length !== 0) {
-        body += `${padding} Features\n\n`
+        body += `${padding} Features 🚀\n\n`
         reasons.feats.map(log).forEach(l => body += l);
     }
     if (reasons.fixes.length !== 0) {
-        body += `${padding} Bug Fixes\n\n`
+        body += `${padding} Bug Fixes 🐛\n\n`
         reasons.fixes.map(log).forEach(l => body += l);
     }
     if (reasons.deps.length !== 0) {
-        body += `${padding} Dependencies Updates\n\n`
+        body += `${padding} Dependencies Updates 🔗\n\n`
         reasons.deps.map(d => `- Dependency ${d.name} bump **${d.releaseType}**\n`).forEach(l => body += l);
     }
 
@@ -169,7 +169,7 @@ function getReleaseType(level: number) {
     return ''
 }
 
-async function calculatePackagesUpdate(packages: PackageData[]) {
+async function calculatePackagesUpdate(packages: PackageData[], isReleaseStage: boolean) {
     const updates: PackageUpdate[] = [];
     const visited: Record<string, Promise<PackageUpdate> | undefined> = {};
 
@@ -191,7 +191,7 @@ async function calculatePackagesUpdate(packages: PackageData[]) {
         }
 
         const bumpLevel = Math.min(suggestion.level ?? 3, depsUpdates.length > 0 ? 2 : 3)
-        const releaseType = getReleaseType(bumpLevel)
+        const releaseType = getReleaseType(isReleaseStage ? -1 : bumpLevel)
         const newVersion = releaseType ? inc(pkg.packageJson.version, releaseType) : pkg.packageJson.version
         const reasons = suggestion.reasons ?? { deps: [], breakings: [], feats: [], fixes: [] }
 
@@ -253,74 +253,36 @@ async function main() {
     const packagesNames = getMultilineInput('packages', { required: false })
     const changelogStartIndex = Number.parseInt(getInput('changelog-start-at', { required: false }) || '0')
     const root = getInput('root', { required: false }) || process.cwd()
-    const readRootCommits = getInput('read-root-commits', { required: false }) || false
-    const writeRootCommitsOnly = getInput('write-root-commits-only', { required: false }) || false
+    const stage = getInput('stage', { required: true })
+    const isReleaseStage = stage === 'release'
 
-    const isMonorepo = packagesNames.length > 0
+    const data = await Promise.all(packagesNames.map(pack => readPackage(pack)))
 
-    const data =
-        isMonorepo
-            ? await Promise.all(packagesNames.map(pack => readPackage(pack)))
-            : [await readPackage(root)]
+    const updates = await calculatePackagesUpdate(data, isReleaseStage)
 
-    const updates = await calculatePackagesUpdate(data)
-
-    for (const update of updates) {
-        await updatePackageContent(update, changelogStartIndex)
-    }
-
-    if (isMonorepo) {
-        let rootUpdate: PackageUpdate | undefined
-        if (readRootCommits) {
-            const rootPkg = await readPackage(root)
-            const updates = await calculatePackagesUpdate([rootPkg])
-            rootUpdate = updates[0]
-        }
-        const rootJsonPath = join(root, 'package.json')
-        const rootPackageJson = JSON.parse(await fs.promises.readFile(rootJsonPath, 'utf-8'))
-        const totalBumpLevel = Math.min(...updates.map(u => u.bumpLevel))
-        const releaseType = getReleaseType(totalBumpLevel)
-        const totalVersion = releaseType ? inc(rootPackageJson.version, releaseType) : rootPackageJson.version
-
-        rootPackageJson.version = totalVersion
-        await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
-
-        let body = `\n## ${totalVersion}\n`;
-        if (writeRootCommitsOnly && rootUpdate) {
-            body += renderChangelog(rootUpdate, false)
-        } else {
-            for (const update of updates) {
-                body += renderChangelog(update, false)
-            }
-            if (rootUpdate) {
-                body += renderChangelog(rootUpdate, false)
-            }
-        }
-
-        const changelogPath = join(root, 'CHANGELOG.md')
-        if (fs.existsSync(changelogPath)) {
-            const changelog = await fs.promises.readFile(changelogPath, 'utf-8')
-            const changelogLines = changelog.split('\n')
-            await fs.promises.writeFile(changelogPath, [...changelogLines.slice(0, changelogStartIndex), body, ...changelogLines.slice(changelogStartIndex)].join('\n'))
-        }
-
-        if (releaseType) {
-            setOutput('release', true)
-            setOutput('version', totalVersion)
-            setOutput('changelog', body)
-            return
-        }
-    } else {
-        if (updates.length === 1) {
-            setOutput('release', true)
-            setOutput('version', updates[0].newVersion)
-            setOutput('changelog', renderChangelog(updates[0], true))
-            return
+    if (!isReleaseStage) {
+        for (const update of updates) {
+            await updatePackageContent(update, changelogStartIndex)
         }
     }
-    setOutput('release', false)
-    setOutput('version', '')
-    setOutput('changelog', '')
+
+    const rootPkg = await readPackage(root)
+    const rootUpdate = (await calculatePackagesUpdate([rootPkg], isReleaseStage))[0]
+    const rootJsonPath = join(root, 'package.json')
+    const rootPackageJson = JSON.parse(await fs.promises.readFile(rootJsonPath, 'utf-8'))
+    const totalBumpLevel = Math.min(...updates.map(u => u.bumpLevel))
+    const releaseType = getReleaseType(isReleaseStage ? -1 : totalBumpLevel)
+    const totalVersion = releaseType ? inc(rootPackageJson.version, releaseType) : rootPackageJson.version
+
+    rootPackageJson.version = totalVersion
+    await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
+
+    let body = `\n## ${totalVersion}\n`;
+    body += renderChangelog(rootUpdate, false)
+
+    setOutput('release', isReleaseStage || !!releaseType)
+    setOutput('version', totalVersion)
+    setOutput('changelog', body)
 }
 
 main();
