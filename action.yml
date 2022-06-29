@@ -21,6 +21,8 @@ outputs:
     description: The new version of the root package
   changelog:
     description: The root changelog text
+  tag:
+    description: The version with `v` prefix
 
 runs:
   using: 'node16'

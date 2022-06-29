@@ -277,11 +277,11 @@ async function main() {
     rootPackageJson.version = totalVersion
     await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
 
-    let body = `\n## ${totalVersion}\n`;
-    body += renderChangelog(rootUpdate, false)
+    let body = renderChangelog(rootUpdate, true)
 
     setOutput('release', isReleaseStage || !!releaseType)
     setOutput('version', totalVersion)
+    setOutput('tag', `${totalVersion}`)
     setOutput('changelog', body)
 }
 
