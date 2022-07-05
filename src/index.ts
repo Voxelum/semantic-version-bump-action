@@ -1,12 +1,10 @@
-import fs from 'fs'
-import { setOutput, getInput, getBooleanInput, getMultilineInput } from '@actions/core'
-import convBump from 'conventional-recommended-bump'
-import bump from './bump'
-import { inc } from 'semver'
-import { join } from 'path'
+import { getInput, getMultilineInput, setOutput } from '@actions/core'
 import { execSync } from 'child_process'
-
-const DRY = !process.env.CI;
+import convBump from 'conventional-recommended-bump'
+import fs from 'fs'
+import { join } from 'path'
+import { inc } from 'semver'
+import bump from './bump'
 
 interface Note {
     title: string;
@@ -183,7 +181,7 @@ async function calculatePackagesUpdate(packages: PackageData[], isReleaseStage: 
 
 
     async function calculateBump(pkg: PackageData): Promise<PackageUpdate> {
-        const suggestion = await getBumpSuggestion(pkg.packageDir)
+        const suggestion = await getBumpSuggestion(pkg.packageDir, isReleaseStage)
         const deps = pkg.packageJson.dependencies
         const depsUpdates: PackageUpdate[] = []
         if (deps) {
@@ -201,7 +199,7 @@ async function calculatePackagesUpdate(packages: PackageData[], isReleaseStage: 
         const bumpLevel = Math.min(suggestion.level ?? 3, depsUpdates.length > 0 ? 2 : 3)
         const releaseType = getReleaseType(isReleaseStage ? -1 : bumpLevel)
         const newVersion = releaseType ? inc(pkg.packageJson.version, releaseType) : pkg.packageJson.version
-        const reasons = suggestion.reasons ?? { deps: [], breakings: [], feats: [], fixes: [] }
+        const reasons = suggestion.reasons ?? { deps: [], breakings: [], feats: [], fixes: [], refactors: [] }
 
         if (depsUpdates.length > 0) {
             for (const dep of depsUpdates) {

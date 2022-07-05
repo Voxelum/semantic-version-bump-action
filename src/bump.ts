@@ -1,4 +1,3 @@
-'use strict'
 import concat from 'concat-stream'
 import conventionalCommitsFilter from 'conventional-commits-filter'
 import conventionalCommitsParser from 'conventional-commits-parser'
@@ -76,7 +75,7 @@ const conventionalRecommendedBump: typeof ConvBumpType = (optionsArgument, parse
             }))
     })
 }
-export default conventionalRecommendedBump
-
 
 function noop() { }
+
+export default conventionalRecommendedBump
