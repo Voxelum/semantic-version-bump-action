@@ -1,6 +1,7 @@
 import fs from 'fs'
 import { setOutput, getInput, getBooleanInput, getMultilineInput } from '@actions/core'
 import convBump from 'conventional-recommended-bump'
+import bump from './bump'
 import { inc } from 'semver'
 import { join } from 'path'
 import { execSync } from 'child_process'
@@ -74,6 +75,7 @@ interface Reasons {
     breakings: CommitBase[]
     feats: CommitBase[]
     fixes: CommitBase[]
+    refactors: CommitBase[]
     deps: { name: string; releaseType: string }[]
 }
 
@@ -85,20 +87,22 @@ interface PackageUpdate extends PackageData {
 
 const remote = execSync('git config --get remote.origin.url').toString().trim()
 
-async function getBumpSuggestion(path: string) {
+async function getBumpSuggestion(path: string, isReleaseStage: boolean) {
     const result = await new Promise<convBump.Callback.Recommendation & { reasons: Reasons }>((resolve, reject) => {
-        convBump({
+        bump({
+            isReleaseStage,
             path,
             whatBump(comments) {
                 const feats = comments.filter(c => c.type === 'feat')
-                const fixes = comments.filter(c => c.type === 'fix' || c.type === 'refactor')
+                const fixes = comments.filter(c => c.type === 'fix' || c.type === 'patch')
+                const refactors = comments.filter(c => c.type === 'refactor')
                 const breakings = comments.filter(c => c.header?.startsWith('BREAKING CHANGE:'))
                 if (comments.some(c => c.header?.startsWith('BREAKING CHANGE:'))) {
-                    return { level: 0, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings } // major
+                    return { level: 0, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings, refactors } // major
                 } else if (comments.some(c => c.type === 'feat')) {
-                    return { level: 1, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings } // minor
+                    return { level: 1, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings, refactors } // minor
                 } else if (comments.some(c => c.type === 'fix' || c.type === 'refactor' || c.type === 'patch')) {
-                    return { level: 2, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings } // patch
+                    return { level: 2, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings, refactors } // patch
                 }
                 return {}
             }
@@ -127,19 +131,23 @@ function renderChangelog(update: PackageUpdate, dedicated: boolean): string {
 
     let body = dedicated ? `## ${update.newVersion}\n` : `### ${update.packageJson.name}@${update.newVersion}\n`;
     if (reasons.breakings.length !== 0) {
-        body += `${padding} BREAKING CHANGES 🛰️\n\n`
+        body += `${padding} 🛰️ BREAKING CHANGES\n\n`
         reasons.breakings.map(log).forEach(l => body += l);
     }
     if (reasons.feats.length !== 0) {
-        body += `${padding} Features 🚀\n\n`
+        body += `${padding} 🚀 Features\n\n`
         reasons.feats.map(log).forEach(l => body += l);
     }
     if (reasons.fixes.length !== 0) {
-        body += `${padding} Bug Fixes 🐛\n\n`
+        body += `${padding} 🐛 Bug Fixes & Patches\n\n`
         reasons.fixes.map(log).forEach(l => body += l);
     }
+    if (reasons.refactors.length !== 0) {
+        body += `${padding} 🏗️ Refactors\n\n`
+        reasons.refactors.map(log).forEach(l => body += l);
+    }
     if (reasons.deps.length !== 0) {
-        body += `${padding} Dependencies Updates 🔗\n\n`
+        body += `${padding} 🔗 Dependencies Updates\n\n`
         reasons.deps.map(d => `- Dependency ${d.name} bump **${d.releaseType}**\n`).forEach(l => body += l);
     }
 
@@ -275,13 +283,15 @@ async function main() {
     const totalVersion = releaseType ? inc(rootPackageJson.version, releaseType) : rootPackageJson.version
 
     rootPackageJson.version = totalVersion
-    await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
+    if (!isReleaseStage) {
+        await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
+    }
 
     let body = renderChangelog(rootUpdate, true)
 
     setOutput('release', isReleaseStage || !!releaseType)
     setOutput('version', totalVersion)
-    setOutput('tag', `${totalVersion}`)
+    setOutput('tag', `v${totalVersion}`)
     setOutput('changelog', body)
 }
 
