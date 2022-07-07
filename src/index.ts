@@ -96,11 +96,11 @@ async function getBumpSuggestion(path: string, isReleaseStage: boolean) {
                 const refactors = comments.filter(c => c.type === 'refactor')
                 const breakings = comments.filter(c => c.header?.startsWith('BREAKING CHANGE:'))
                 if (comments.some(c => c.header?.startsWith('BREAKING CHANGE:'))) {
-                    return { level: 0, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings, refactors } // major
+                    return { level: 0, reasons: { feats, fixes, breakings, deps: [], refactors }, feats, fixes, breakings, refactors } // major
                 } else if (comments.some(c => c.type === 'feat')) {
-                    return { level: 1, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings, refactors } // minor
+                    return { level: 1, reasons: { feats, fixes, breakings, deps: [], refactors }, feats, fixes, breakings, refactors } // minor
                 } else if (comments.some(c => c.type === 'fix' || c.type === 'refactor' || c.type === 'patch')) {
-                    return { level: 2, reasons: { feats, fixes, breakings, deps: [] }, feats, fixes, breakings, refactors } // patch
+                    return { level: 2, reasons: { feats, fixes, breakings, deps: [], refactors }, feats, fixes, breakings, refactors } // patch
                 }
                 return {}
             }
@@ -120,6 +120,7 @@ function log(reason: CommitBase) {
 function renderChangelog(update: PackageUpdate, dedicated: boolean): string {
     const reasons = update.reasons
     if (reasons.breakings.length === 0
+        && reasons.refactors.length === 0
         && reasons.deps.length === 0
         && reasons.feats.length === 0
         && reasons.fixes.length === 0) {
