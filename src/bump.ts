@@ -49,6 +49,9 @@ const conventionalRecommendedBump: typeof ConvBumpType = (optionsArgument, parse
         const from = optionsArgument.isReleaseStage ? tags[1] || '' : tags[0]
         const to = optionsArgument.isReleaseStage ? tags[0] || '' : undefined
 
+        console.log(`isReleaseStage: ${optionsArgument.isReleaseStage}`)
+        console.log(`From ${from} to ${to}`)
+
         gitRawCommits({
             format: '%B%n-hash-%n%H',
             from,

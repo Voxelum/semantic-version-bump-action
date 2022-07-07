@@ -263,6 +263,8 @@ async function main() {
     const stage = getInput('stage', { required: true })
     const isReleaseStage = stage === 'release'
 
+    console.log(`Current stage is ${isReleaseStage}`)
+
     const data = await Promise.all(packagesNames.map(pack => readPackage(pack)))
 
     const updates = await calculatePackagesUpdate(data, isReleaseStage)
