@@ -180,7 +180,6 @@ async function calculatePackagesUpdate(packages: PackageData[], isReleaseStage: 
     const updates: PackageUpdate[] = [];
     const visited: Record<string, Promise<PackageUpdate> | undefined> = {};
 
-
     async function calculateBump(pkg: PackageData): Promise<PackageUpdate> {
         const suggestion = await getBumpSuggestion(pkg.packageDir, isReleaseStage)
         const deps = pkg.packageJson.dependencies
@@ -269,11 +268,6 @@ async function main() {
 
     const updates = await calculatePackagesUpdate(data, isReleaseStage)
 
-    if (!isReleaseStage) {
-        for (const update of updates) {
-            await updatePackageContent(update, changelogStartIndex)
-        }
-    }
 
     const rootPkg = await readPackage(root)
     const rootUpdate = (await calculatePackagesUpdate([rootPkg], isReleaseStage))[0]
@@ -284,6 +278,18 @@ async function main() {
     const totalVersion = releaseType ? inc(rootPackageJson.version, releaseType) : rootPackageJson.version
 
     rootPackageJson.version = totalVersion
+    const trick = updates.find(u => u.packageJson.name === 'xmcl')
+    if (trick) {
+        trick.bumpLevel = totalBumpLevel
+        trick.newVersion = totalVersion
+    }
+
+    if (!isReleaseStage) {
+        for (const update of updates) {
+            await updatePackageContent(update, changelogStartIndex)
+        }
+    }
+
     if (!isReleaseStage) {
         await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
     }
