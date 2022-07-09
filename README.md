@@ -1,45 +1,13 @@
 # The bump version & create changelog actions
 
-This action will try to bump version in package.json by the git commit.
+Only used for x-minecraft-launcher
 
-It use the `conventional-recommended-bump` to decide what version should be bumped.
-
-It will simply collect the commit message and generate changelog.
-
-It will write to the CHANGELOG.md if it present beside the `package.json`
-
-## Pre-requirement
-
-Must have a `package.json` file in the root directory with the `version` field.
-
-You can set the root via the input property `root`.
-
-## Input
-
-### root
-
-The root of nodejs project. By default this is `.`.
-
-### packages
-
-If your project is a monorepo, you can assign the sub-packages in this list. It does not support blob yet, but I might add it in the future.
-
-### changelog-start-at
-
-When we generate the changelog, we will try to incrementally insert the new changelog to the beginning of the `CHANGELOG.md`. This can change the line to insert. By default, this is `0`.
-
-
-## Output
-
-### release
-
-A boolean value represent should this change create a new release.
-If no `fix`, `feat`, `BREAKING CHANGE` present. This will be `false`.
-
-### version
-
-The new version of the root project `package.json`.
-
-### changelog
-
-The changelog text of the root project `package.json`.
+  
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 50 50" width="50px" height="50px">
+    <defs>
+        <clipPath id="cut-off-bottom">
+            <circle cx="25" cy="25" r="20" />
+        </clipPath>
+    </defs>
+    <image clip-path="url(#cut-off-bottom)"  x="0" y="0" width="50" height="50" xlink:href="https://pic1.afdiancdn.com/user/dd9058ce20df11eba5c052540025c377/avatar/0c776e6de1b1027e951c6d94919eb781_w1280_h1024_s364.jpg"></image>
+</svg>
