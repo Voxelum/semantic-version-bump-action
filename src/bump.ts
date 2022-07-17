@@ -46,8 +46,9 @@ const conventionalRecommendedBump: typeof ConvBumpType = (optionsArgument, parse
             return cb(err)
         }
 
-        const from = optionsArgument.isReleaseStage ? tags[1] || '' : tags[0]
-        const to = optionsArgument.isReleaseStage ? tags[0] || '' : undefined
+        const useLegacy = false /* optionsArgument.isReleaseStage */
+        const from = useLegacy ? tags[1] || '' : tags[0]
+        const to = useLegacy ? tags[0] || '' : undefined
 
         console.log(`isReleaseStage: ${optionsArgument.isReleaseStage}`)
         console.log(`From ${from} to ${to}`)

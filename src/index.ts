@@ -268,7 +268,6 @@ async function main() {
 
     const updates = await calculatePackagesUpdate(data, isReleaseStage)
 
-
     const rootPkg = await readPackage(root)
     const rootUpdate = (await calculatePackagesUpdate([rootPkg], isReleaseStage))[0]
     const rootJsonPath = join(root, 'package.json')
@@ -278,19 +277,15 @@ async function main() {
     const totalVersion = releaseType ? inc(rootPackageJson.version, releaseType) : rootPackageJson.version
 
     rootPackageJson.version = totalVersion
-    const trick = updates.find(u => u.packageJson.name === 'xmcl')
-    if (trick) {
-        trick.bumpLevel = totalBumpLevel
-        trick.newVersion = totalVersion
-    }
 
     if (!isReleaseStage) {
         for (const update of updates) {
             await updatePackageContent(update, changelogStartIndex)
         }
-    }
-
-    if (!isReleaseStage) {
+        const electronAppJsonPath = join(root, 'xmcl-electron-app', 'package.json')
+        const appJsonContent = JSON.parse(await fs.promises.readFile(electronAppJsonPath, 'utf-8'))
+        appJsonContent.version = totalVersion
+        await fs.promises.writeFile(electronAppJsonPath, JSON.stringify(appJsonContent, null, 4))
         await fs.promises.writeFile(rootJsonPath, JSON.stringify(rootPackageJson, null, 4))
     }
 
